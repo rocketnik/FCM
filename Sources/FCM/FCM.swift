@@ -51,16 +51,16 @@ public struct FCM {
 // MARK: Cache
 
 extension FCM {
-    struct ConfigurationKey: StorageKey {
-        typealias Value = FCMConfiguration
+    struct CacheKey: StorageKey {
+        typealias Value = Cache
     }
 
     public var configuration: FCMConfiguration? {
         get {
-            application.storage[ConfigurationKey.self]
+            cache[.configuration]
         }
         nonmutating set {
-            application.storage[ConfigurationKey.self] = newValue
+            cache[.configuration] = newValue
             if let newValue = newValue {
                 warmUpCache(with: newValue.email)
             }
@@ -80,42 +80,30 @@ extension FCM {
         }
     }
     
-    struct JWTKey: StorageKey {
-        typealias Value = String
-    }
-    
     var jwt: String? {
         get {
-            application.storage[JWTKey.self]
+            cache[.jwt]
         }
         nonmutating set {
-            application.storage[JWTKey.self] = newValue
+            cache[.jwt] = newValue
         }
-    }
-    
-    struct AccessTokenKey: StorageKey {
-        typealias Value = String
     }
     
     var accessToken: String? {
         get {
-            application.storage[AccessTokenKey.self]
+            cache[.accessToken]
         }
         nonmutating set {
-            application.storage[AccessTokenKey.self] = newValue
+            cache[.accessToken] = newValue
         }
     }
-    
-    struct GAuthKey: StorageKey {
-        typealias Value = GAuthPayload
-    }
-    
+
     var gAuth: GAuthPayload? {
         get {
-            application.storage[GAuthKey.self]
+            cache[.gAuth]
         }
         nonmutating set {
-            application.storage[GAuthKey.self] = newValue
+            cache[.gAuth] = newValue
         }
     }
 }
