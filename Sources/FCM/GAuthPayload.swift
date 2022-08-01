@@ -12,7 +12,7 @@ struct GAuthPayload: JWTPayload {
     var aud: AudienceClaim
     
     static var expirationClaim: ExpirationClaim {
-        return ExpirationClaim(value: Date().addingTimeInterval(3600))
+        return ExpirationClaim(value: Date().addingTimeInterval(59 * 60))
     }
 
     init(iss: String, sub: String, scope: String, aud: String) {
