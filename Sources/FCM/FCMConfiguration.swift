@@ -7,7 +7,6 @@ public struct FCMConfiguration {
     
     // MARK: Default configurations
     
-    public var apnsDefaultConfig: FCMApnsConfig<FCMApnsPayload>?
     public var androidDefaultConfig: FCMAndroidConfig?
     public var webpushDefaultConfig: FCMWebpushConfig?
     

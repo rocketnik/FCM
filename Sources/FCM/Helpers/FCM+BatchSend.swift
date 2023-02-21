@@ -71,7 +71,7 @@ extension FCM {
                     name: message.name,
                     android: message.android ?? androidDefaultConfig,
                     webpush: message.webpush ?? webpushDefaultConfig,
-                    apns: message.apns ?? apnsDefaultConfig
+                    apns: message.apns
                 )
 
                 try partBody.writeJSONEncodable(Payload(message: message))

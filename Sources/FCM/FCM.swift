@@ -17,11 +17,6 @@ public struct FCM {
     
     // MARK: Default configurations
     
-    public var apnsDefaultConfig: FCMApnsConfig<FCMApnsPayload>? {
-        get { configuration?.apnsDefaultConfig }
-        set { configuration?.apnsDefaultConfig = newValue }
-    }
-    
     public var androidDefaultConfig: FCMAndroidConfig? {
         get { configuration?.androidDefaultConfig }
         set { configuration?.androidDefaultConfig = newValue }
