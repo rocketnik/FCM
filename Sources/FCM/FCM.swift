@@ -18,13 +18,13 @@ public struct FCM {
     // MARK: Default configurations
     
     public var androidDefaultConfig: FCMAndroidConfig? {
-        get { configuration?.androidDefaultConfig }
-        set { configuration?.androidDefaultConfig = newValue }
+        get { configuration.androidDefaultConfig }
+        set { configuration.androidDefaultConfig = newValue }
     }
     
     public var webpushDefaultConfig: FCMWebpushConfig? {
-        get { configuration?.webpushDefaultConfig }
-        set { configuration?.webpushDefaultConfig = newValue }
+        get { configuration.webpushDefaultConfig }
+        set { configuration.webpushDefaultConfig = newValue }
     }
     
     // MARK: Initialization
@@ -50,15 +50,16 @@ extension FCM {
         typealias Value = Cache
     }
 
-    public var configuration: FCMConfiguration? {
+    public var configuration: FCMConfiguration {
         get {
-            cache[.configuration]
+            guard let value: FCMConfiguration = cache[.configuration] else {
+                fatalError("FCM not configured. Use app.fcm.configuration = ...")
+            }
+            return value
         }
         nonmutating set {
             cache[.configuration] = newValue
-            if let newValue = newValue {
-                warmUpCache(with: newValue.email)
-            }
+            warmUpCache(with: newValue.email)
         }
     }
     
