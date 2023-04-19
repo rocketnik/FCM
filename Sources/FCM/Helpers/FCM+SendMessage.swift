@@ -12,23 +12,13 @@ struct Result: Decodable {
 extension FCM {
     public func send<APNSPayload: FCMApnsPayloadProtocol & Codable>(
         _ message: FCMMessage<APNSPayload>
-    ) -> EventLoopFuture<String> {
-        _send(message)
-    }
-    
-    public func send<APNSPayload: FCMApnsPayloadProtocol & Codable>(
-        _ message: FCMMessage<APNSPayload>,
-        on eventLoop: EventLoop
-    ) -> EventLoopFuture<String> {
-        _send(message).hop(to: eventLoop)
+    ) async throws -> String {
+        try await _send(message)
     }
     
     private func _send<APNSPayload: FCMApnsPayloadProtocol & Codable>(
         _ message: FCMMessage<APNSPayload>
-    ) -> EventLoopFuture<String> {
-        guard let configuration = self.configuration else {
-            fatalError("FCM not configured. Use app.fcm.configuration = ...")
-        }
+    ) async throws -> String {
         if message.android == nil,
             let androidDefaultConfig = androidDefaultConfig {
             message.android = androidDefaultConfig
@@ -39,19 +29,16 @@ extension FCM {
         }
 
         let url = actionsBaseURL + configuration.projectId + "/messages:send"
-        return getAccessToken().flatMap { accessToken -> EventLoopFuture<ClientResponse> in
-            var headers = HTTPHeaders()
-            headers.bearerAuthorization = .init(token: accessToken)
+        let accessToken = try await getAccessToken()
+        var headers = HTTPHeaders()
+        headers.bearerAuthorization = .init(token: accessToken)
 
-            return self.client.post(URI(string: url), headers: headers) { (req) in
-                let payload = Payload(message: message)
-                try req.content.encode(payload)
-            }
-        }
-        .validate()
-        .flatMapThrowing { res in
-            let result = try res.content.decode(Result.self)
-            return result.name
-        }
+        let res = try await self.client.post(URI(string: url), headers: headers) { (req) in
+            let payload = Payload(message: message)
+            try req.content.encode(payload)
+        }.validate()
+        
+        let result = try res.content.decode(Result.self)
+        return result.name
     }
 }

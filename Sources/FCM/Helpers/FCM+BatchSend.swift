@@ -2,40 +2,39 @@ import Foundation
 import Vapor
 
 extension FCM {
-    public func batchSend(_ message: FCMMessageDefault, tokens: String...) -> EventLoopFuture<[String]> {
-        _send(message, tokens: tokens)
+    public func batchSend(_ message: FCMMessageDefault, tokens: String...) async throws -> [String] {
+        try await _send(message, tokens: tokens)
     }
 
-    public func batchSend(_ message: FCMMessageDefault, tokens: String..., on eventLoop: EventLoop) -> EventLoopFuture<[String]> {
-        _send(message, tokens: tokens).hop(to: eventLoop)
+    public func batchSend(_ message: FCMMessageDefault, tokens: [String]) async throws -> [String] {
+        try await _send(message, tokens: tokens)
     }
 
-    public func batchSend(_ message: FCMMessageDefault, tokens: [String]) -> EventLoopFuture<[String]> {
-        _send(message, tokens: tokens)
-    }
-
-    public func batchSend(_ message: FCMMessageDefault, tokens: [String], on eventLoop: EventLoop) -> EventLoopFuture<[String]> {
-        _send(message, tokens: tokens).hop(to: eventLoop)
-    }
-
-    private func _send(_ message: FCMMessageDefault, tokens: [String]) -> EventLoopFuture<[String]> {
-        guard let configuration = self.configuration else {
-            fatalError("FCM not configured. Use app.fcm.configuration = ...")
-        }
-
+    private func _send(_ message: FCMMessageDefault, tokens: [String]) async throws -> [String] {
         let urlPath = URI(string: actionsBaseURL + configuration.projectId + "/messages:send").path
+        let accessToken = try await getAccessToken()
 
-        return getAccessToken().flatMap { accessToken in
-            tokens.chunked(into: 500).map { chunk in
-                self._sendChunk(
-                    message,
-                    tokens: chunk,
-                    urlPath: urlPath,
-                    accessToken: accessToken
-                )
+        let chunks = tokens.chunked(into: 500)
+
+        return try await withThrowingTaskGroup(of: [String].self) { group in
+            for chunk in chunks {
+                group.addTask {
+                    return try await self._sendChunk(
+                        message,
+                        tokens: chunk,
+                        urlPath: urlPath,
+                        accessToken: accessToken
+                    )
+                }
             }
-            .flatten(on: self.client.eventLoop)
-            .map { $0.flatMap { $0 } }
+
+            var results = [String]()
+
+            for try await result in group {
+                results.append(contentsOf: result)
+            }
+
+            return results
         }
     }
 
@@ -44,7 +43,7 @@ extension FCM {
         tokens: [String],
         urlPath: String,
         accessToken: String
-    ) -> EventLoopFuture<[String]> {
+    ) async throws -> [String] {
         var body = ByteBufferAllocator().buffer(capacity: 0)
         let boundary = "subrequest_boundary"
 
@@ -81,52 +80,44 @@ extension FCM {
 
             try MultipartSerializer().serialize(parts: parts, boundary: boundary, into: &body)
         } catch {
-            return client.eventLoop.makeFailedFuture(error)
+            throw error
         }
 
         var headers = HTTPHeaders()
         headers.contentType = .init(type: "multipart", subType: "mixed", parameters: ["boundary": boundary])
         headers.bearerAuthorization = .init(token: accessToken)
 
-        return self.client
-            .post(URI(string: batchURL), headers: headers) { req in
-                req.body = body
+        let res = try await client.post(URI(string: batchURL), headers: headers) { req in
+            req.body = body
+        }.validate()
+        guard let boundary = res.headers.contentType?.parameters["boundary"] else {
+            throw Abort(.internalServerError, reason: "FCM: Missing \"boundary\" in batch response headers")
+        }
+        guard let body = res.body else {
+            throw Abort(.internalServerError, reason: "FCM: Missing response body from batch operation")
+        }
+
+        struct Result: Decodable {
+            let name: String
+        }
+
+        let jsonDecoder = JSONDecoder()
+        var result: [String] = []
+
+        let parser = MultipartParser(boundary: boundary)
+        parser.onBody = { body in
+            let bytes = body.readableBytesView
+            if let indexOfBodyStart = bytes.firstIndex(of: 0x7B) /* '{' */ {
+                body.moveReaderIndex(to: indexOfBodyStart)
+                if let name = try? jsonDecoder.decode(Result.self, from: body).name {
+                    result.append(name)
+                }
             }
-            .validate()
-            .flatMapThrowing { (res: ClientResponse) in
-                guard
-                    let boundary = res.headers.contentType?.parameters["boundary"]
-                else {
-                    throw Abort(.internalServerError, reason: "FCM: Missing \"boundary\" in batch response headers")
-                }
-                guard
-                    let body = res.body
-                else {
-                    throw Abort(.internalServerError, reason: "FCM: Missing response body from batch operation")
-                }
+        }
 
-                struct Result: Decodable {
-                    let name: String
-                }
+        try parser.execute(body)
 
-                let jsonDecoder = JSONDecoder()
-                var result: [String] = []
-
-                let parser = MultipartParser(boundary: boundary)
-                parser.onBody = { body in
-                    let bytes = body.readableBytesView
-                    if let indexOfBodyStart = bytes.firstIndex(of: 0x7B) /* '{' */ {
-                        body.moveReaderIndex(to: indexOfBodyStart)
-                        if let name = try? jsonDecoder.decode(Result.self, from: body).name {
-                            result.append(name)
-                        }
-                    }
-                }
-
-                try parser.execute(body)
-
-                return result
-            }
+        return result
     }
 }
 

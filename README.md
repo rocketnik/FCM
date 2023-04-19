@@ -86,13 +86,17 @@ func configure(_ app: Application) throws {
 #### OPTIONAL: Set default configurations, e.g. to enable notification sound
 Add the following code to your `configure.swift` after `app.fcm.configuration = ...`
 ```swift
-app.fcm.configuration?.androidDefaultConfig = FCMAndroidConfig(ttl: "86400s",
-                                                               restricted_package_name: "com.example.myapp",
-                                                               notification: FCMAndroidNotification(sound: "default"))
+app.fcm.configuration?.androidDefaultConfig = FCMAndroidConfig(
+  ttl: "86400s",
+  restricted_package_name: "com.example.myapp",
+  notification: FCMAndroidNotification(sound: "default")
+)
                                                 
-app.fcm.configuration?.webpushDefaultConfig = FCMWebpushConfig(headers: [:],
-                                                               data: [:],
-                                                               notification: [:])
+app.fcm.configuration?.webpushDefaultConfig = FCMWebpushConfig(
+  headers: [:],
+  data: [:],
+  notification: [:]
+)
 ```
 #### Let's send first push notification! 🚀
 
@@ -104,13 +108,12 @@ Here's an example route handler with push notification sending using token
 import FCM
 
 func routes(_ app: Application) throws {
-    app.get("testfcm") { req -> EventLoopFuture<String> in
+    app.get("testfcm") { req async throws -> String in
         let token = "<YOUR FIREBASE DEVICE TOKEN>" // get it from iOS/Android SDK
         let notification = FCMNotification(title: "Vapor is awesome!", body: "Swift one love! ❤️")
         let message = FCMMessage(token: token, notification: notification)
-        return req.fcm.send(message, on: req.eventLoop).map { name in
-            return "Just sent: \(name)"
-        }
+        let name = try await req.fcm.send(message)
+        return "Just sent: \(name)"
     }
 }
 ```
@@ -140,9 +143,9 @@ let token100500 = "<YOUR FIREBASE DEVICE TOKEN>"
 
 let notification = FCMNotification(title: "Life is great! 😃", body: "Swift one love! ❤️")
 let message = FCMMessage(notification: notification)
-application.fcm.batchSend(message, tokens: [token1, token2, token3, ..., token100500]).map {
-    print("sent!")
-}
+try await application.fcm.batchSend(message, tokens: [token1, token2, token3, ..., token100500])
+print("sent!")
+
 ```
 
 # APNS to Firebase token conversion
@@ -168,12 +171,12 @@ Next steps are optional
 ```swift
 /// The simplest way
 /// .env here means that FCM_SERVER_KEY and FCM_APP_BUNDLE_ID will be used
-application.fcm.registerAPNS(.env, tokens: "token1", "token3", ..., "token100").flatMap { tokens in
-    /// `tokens` is array of `APNSToFirebaseToken` structs
-    /// which contains:
-    /// registration_token - Firebase token
-    /// apns_token - APNS token
-    /// isRegistered - boolean value which indicates if registration was successful
+let tokens = try await application.fcm.registerAPNS(.env, tokens: "token1", "token3", ..., "token100")
+/// `tokens` is array of `APNSToFirebaseToken` structs
+/// which contains:
+/// registration_token - Firebase token
+/// apns_token - APNS token
+/// isRegistered - boolean value which indicates if registration was successful
 }
 
 /// instead of .env you could declare your own identifier
@@ -182,15 +185,13 @@ extension RegisterAPNSID {
 }
 
 /// Advanced way
-application.fcm.registerAPNS(
+try await application.fcm.registerAPNS(
     appBundleId: String, // iOS app bundle identifier
     serverKey: String?, // optional server key, if nil then env variable will be used
     sandbox: Bool, // optional sandbox key, false by default
-    tokens: [String], // an array of APNS tokens
-    on: EventLoop? // optional event loop, if nil then application.eventLoopGroup.next() will be used
-).flatMap { tokens in
-    /// the same as in above example
-}
+    tokens: [String] // an array of APNS tokens
+)
+/// the same as in above example
 ```
 
 > 💡 Please note that push token taken from Xcode while debugging is for `sandbox`, so either use `.envSandbox` or don't forget to set `sandbox: true`
