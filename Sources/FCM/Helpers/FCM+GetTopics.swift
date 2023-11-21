@@ -12,12 +12,15 @@ extension FCM {
         let response = try await client.get(URI(string: url), headers: headers).validate()
 
         let result = try response.content.decode(TopicsResponse.self, using: JSONDecoder())
-        return Array(result.rel.topics.keys)
+        guard let topics = result.rel?.topics.keys else {
+            return []
+        }
+        return Array(topics)
     }
 }
 
 struct TopicsResponse: Codable {
-    let rel: SubscribedTopics
+    let rel: SubscribedTopics?
 
     struct SubscribedTopics: Codable {
         let topics: [String: Topic]
