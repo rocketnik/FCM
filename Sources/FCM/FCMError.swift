@@ -49,7 +49,7 @@ extension ClientResponse {
                 throw error
             }
             let body = body.map(String.init) ?? ""
-            throw Abort(.internalServerError, reason: "FCM: Unexpected error '\(body)'")
+            throw Abort(.init(statusCode: Int(status.code)), reason: "FCM: Unexpected error '\(body)'")
         }
         return self
     }
