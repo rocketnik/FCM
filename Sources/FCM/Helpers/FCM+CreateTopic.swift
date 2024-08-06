@@ -11,7 +11,7 @@ extension FCM {
     }
 
     private func _createTopic(_ name: String? = nil, tokens: [String]) async throws -> String {
-        let headers = makeHeaders()
+        let headers = try await makeHeaders()
         let url = self.iidURL + "batchAdd"
         let name = name ?? UUID().uuidString
 

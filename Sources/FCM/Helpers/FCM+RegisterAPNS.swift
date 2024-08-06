@@ -98,7 +98,7 @@ extension FCM {
         guard tokens.count > 0 else {
             return []
         }
-        let headers = makeHeaders()
+        let headers = try await makeHeaders()
         let url = iidURL + "batchImport"
 
         let res = try await client.post(URI(string: url), headers: headers) { (req) in

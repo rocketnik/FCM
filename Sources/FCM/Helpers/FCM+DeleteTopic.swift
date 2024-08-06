@@ -2,12 +2,11 @@ import Foundation
 import Vapor
 
 extension FCM {
-    func makeHeaders() -> HTTPHeaders {
-        guard let serverKey = configuration.serverKey else {
-            fatalError("FCM: DeleteTopic: Server Key is missing.")
-        }
+    func makeHeaders() async throws -> HTTPHeaders {
+        let accessToken = try await getAccessToken()
         var headers = HTTPHeaders()
-        headers.add(name: .authorization, value: "key=\(serverKey)")
+        headers.add(name: "access_token_auth", value: "true")
+        headers.bearerAuthorization = .init(token: accessToken)
         return headers
     }
 }
@@ -21,7 +20,7 @@ extension FCM {
     }
 
     private func _deleteTopic(_ name: String, tokens: [String]) async throws {
-        let headers = makeHeaders()
+        let headers = try await makeHeaders()
         let url = self.iidURL + "batchRemove"
         
         _ = try await self.client.post(URI(string: url), headers: headers) { (req) in
