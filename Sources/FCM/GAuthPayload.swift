@@ -12,7 +12,7 @@ struct GAuthPayload: JWTPayload {
     var aud: AudienceClaim
     
     static var expirationClaim: ExpirationClaim {
-        return ExpirationClaim(value: Date().addingTimeInterval(59 * 60))
+        return ExpirationClaim(value: Date().addingTimeInterval(60 * 60))
     }
 
     init(iss: String, sub: String, scope: String, aud: String) {
@@ -40,12 +40,8 @@ struct GAuthPayload: JWTPayload {
     }
 
     var hasExpired: Bool {
-        do {
-            try exp.verifyNotExpired()
-            return false
-        } catch {
-            return true
-        }
+        let now = Date().timeIntervalSince1970
+        return now >= exp.value.timeIntervalSince1970 - (5 * 60)
     }
 
     func updated() -> Self {

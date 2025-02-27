@@ -85,7 +85,7 @@ extension FCM {
         }
     }
     
-    var accessToken: String? {
+    var accessToken: AccessToken? {
         get {
             cache[.accessToken]
         }

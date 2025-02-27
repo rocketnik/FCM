@@ -7,7 +7,7 @@ extension FCM {
     }
 
     private func _getTopics(token: String) async throws -> [String] {
-        let headers = makeHeaders()
+        let headers = try await makeHeaders()
         let url = self.iidURL + "info/\(token)?details=true"
         let response = try await client.get(URI(string: url), headers: headers).validate()
 

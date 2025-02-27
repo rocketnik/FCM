@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         // 💧 A server-side Swift web framework.
         .package(url: "https://github.com/vapor/vapor.git", from: "4.66.1"),
-        .package(url: "https://github.com/vapor/jwt.git", from: "4.2.2"),
+        .package(url: "https://github.com/vapor/jwt.git", from: "5.0.0"),
     ],
     targets: [
         .target(name: "FCM", dependencies: [

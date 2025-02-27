@@ -3,12 +3,8 @@ import Vapor
 
 extension FCM {
     func getAccessToken() async throws -> String {
-        guard let gAuth = gAuth else {
-            fatalError("FCM gAuth can't be nil")
-        }
-
-        if !gAuth.hasExpired, let token = accessToken {
-            return token
+        if let token = accessToken, !token.hasExpired {
+            return token.value
         }
 
         let response = try await client.post(URI(string: audience)) { (req) in
@@ -20,9 +16,14 @@ extension FCM {
 
         struct Result: Codable {
             let access_token: String
+            let expires_in: Int
         }
+
         let result = try response.content.decode(Result.self, using: JSONDecoder())
-        self.accessToken = result.access_token
+        self.accessToken = AccessToken(
+            value: result.access_token,
+            expiresAt: Date().addingTimeInterval(TimeInterval(result.expires_in))
+        )
         return result.access_token
     }
 }
