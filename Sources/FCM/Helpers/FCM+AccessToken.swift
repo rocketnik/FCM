@@ -6,11 +6,11 @@ extension FCM {
         if let token = accessToken, !token.hasExpired {
             return token.value
         }
-
+        let jwt = try await getJWT()
         let response = try await client.post(URI(string: audience)) { (req) in
             try req.content.encode([
                 "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-                "assertion": try self.getJWT(),
+                "assertion": jwt,
             ])
         }.validate()
 

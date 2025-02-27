@@ -1,6 +1,6 @@
 import Vapor
 import Foundation
-import JWT
+import JWTKit
 
 // MARK: Engine
 
@@ -68,10 +68,12 @@ extension FCM {
             gAuth = GAuthPayload(iss: email, sub: email, scope: scope, aud: audience)
         }
         if jwt == nil {
-            do {
-                jwt = try generateJWT()
-            } catch {
-                fatalError("FCM Unable to generate JWT: \(error)")
+            Task {
+                do {
+                    jwt = try await generateJWT()
+                } catch {
+                    fatalError("FCM Unable to generate JWT: \(error)")
+                }
             }
         }
     }

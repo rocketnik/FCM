@@ -1,7 +1,8 @@
-import JWT
+import JWTKit
 import Foundation
 
 struct GAuthPayload: JWTPayload {
+
     let uid: String
     
     var exp: ExpirationClaim
@@ -35,7 +36,7 @@ struct GAuthPayload: JWTPayload {
         self.aud = aud
     }
 
-    func verify(using signer: JWTSigner) throws {
+    func verify(using algorithm: some JWTKit.JWTAlgorithm) async throws {
         // not used
     }
 
